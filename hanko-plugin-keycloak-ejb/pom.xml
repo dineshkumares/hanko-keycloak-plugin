@@ -3,7 +3,8 @@
     <parent>
         <artifactId>hanko-plugin-keycloak-parent</artifactId>
         <groupId>io.hanko.plugins.keycloak</groupId>
-        <version>0.1.1-alpha</version>
+        <version>0.2-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <name>HANKO Plugin Keycloak EJB</name>
@@ -30,22 +31,37 @@
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-core</artifactId>
-            <version>4.5.0.Final</version>
+            <version>4.8.3.Final</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi</artifactId>
-            <version>4.5.0.Final</version>
+            <version>4.8.3.Final</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-server-spi-private</artifactId>
-            <version>4.5.0.Final</version>
+            <version>4.8.3.Final</version>
         </dependency>
         <dependency>
             <groupId>org.keycloak</groupId>
             <artifactId>keycloak-services</artifactId>
-            <version>4.5.0.Final</version>
+            <version>4.8.3.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.keycloak</groupId>
+            <artifactId>keycloak-model-jpa</artifactId>
+            <version>4.8.3.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.hibernate</groupId>
+            <artifactId>hibernate-entitymanager</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 

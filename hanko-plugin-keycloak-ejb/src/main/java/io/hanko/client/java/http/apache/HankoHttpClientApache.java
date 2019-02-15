@@ -1,12 +1,12 @@
 package io.hanko.client.java.http.apache;
 
+import io.hanko.client.java.HankoClientConfig;
 import io.hanko.client.java.HmacUtil;
 import io.hanko.client.java.http.HankoHttpClient;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.HttpHost;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.*;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
@@ -21,41 +21,59 @@ public class HankoHttpClientApache implements HankoHttpClient {
     private String baseUrl;
     private CloseableHttpClient httpclient = HttpClients.createDefault();
     private final HmacUtil hmacUtil;
+    private final HankoClientConfig config;
 
-    public HankoHttpClientApache(String baseUrl) {
-        this.baseUrl = baseUrl;
+    public HankoHttpClientApache(HankoClientConfig config) {
+        this.baseUrl = config.getApiUrl();
         this.hmacUtil = new HmacUtil();
+        this.config = config;
     }
 
-    @Override
-    public InputStream post(String url, String json, String apiKey, String apiKeyId) {
-        // create request
-        HttpPost httpPost = new HttpPost(baseUrl + url);
-        httpPost.setHeader("Content-Type", "application/json");
+    public InputStream send(String url, String json, HttpEntityEnclosingRequestBase request) {
+        request.setHeader("Content-Type", "application/json");
+
+        setupProxy(request);
 
         // add json body
         try {
-            StringEntity entity = new StringEntity(json);
-            httpPost.setEntity(entity);
-            String path = httpPost.getURI().getPath();
-            String method = httpPost.getMethod();
-            String authHeader = hmacUtil.makeAuthorizationHeader(apiKey, apiKeyId, method, path, json);
-            httpPost.addHeader("Authorization", authHeader);
+            StringEntity entity = new StringEntity(json, "UTF-8");
+            request.setEntity(entity);
+            String path = request.getURI().getPath();
+            String method = request.getMethod();
+            String authHeader = hmacUtil.makeAuthorizationHeader(config.getApiKeySecret(), config.getApiKeyId(), method, path, json);
+            request.addHeader("Authorization", authHeader);
         } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
 
-        return executeRequest(httpPost);
+        return executeRequest(request);
     }
 
     @Override
-    public InputStream get(String url, String apiKey, String apiKeyId) {
+    public InputStream post(String url, String json) {
+        // create request
+        HttpPost httpPost = new HttpPost(baseUrl + url);
+        return send(url, json, httpPost);
+    }
+
+    @Override
+    public InputStream put(String url, String json) {
+        // create request
+        HttpPut httpPut = new HttpPut(baseUrl + url);
+        return send(url, json, httpPut);
+    }
+
+    @Override
+    public InputStream get(String url) {
         // create request
         HttpGet httpGet = new HttpGet(baseUrl + url);
+
+        setupProxy(httpGet);
+
         try {
             String path = httpGet.getURI().getPath();
             String method = httpGet.getMethod();
-            String authHeader = hmacUtil.makeAuthorizationHeader(apiKey, apiKeyId, method, path, "");
+            String authHeader = hmacUtil.makeAuthorizationHeader(config.getApiKeySecret(), config.getApiKeyId(), method, path, "");
             httpGet.addHeader("Authorization", authHeader);
             return executeRequest(httpGet);
         } catch (Exception ex) {
@@ -68,15 +86,33 @@ public class HankoHttpClientApache implements HankoHttpClient {
             CloseableHttpResponse response = httpclient.execute(request);
             HttpEntity resultEntity = response.getEntity();
 
-            if (response.getStatusLine().getStatusCode() == 401) {
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            if (statusCode == 401) {
                 String content = new BufferedReader(new InputStreamReader(resultEntity.getContent()))
                         .lines().collect(Collectors.joining("\n"));
                 throw new RuntimeException("Hanko API returned 401, please check your API key configuration: " + content);
             }
 
+            if (statusCode >= 300) {
+                String content = new BufferedReader(new InputStreamReader(resultEntity.getContent()))
+                        .lines().collect(Collectors.joining("\n"));
+                throw new RuntimeException("Hanko API returned an unexpected status code: " + statusCode + "\n" + content);
+            }
+
             return resultEntity.getContent();
         } catch (Exception ex) {
             throw new RuntimeException(ex);
+        }
+    }
+
+    private void setupProxy(HttpRequestBase request) {
+        if (config.getProxyEnabled()) {
+            HttpHost proxy = new HttpHost(config.getProxyAddress(), config.getProxyPort(), config.getProxyType());
+            RequestConfig config = RequestConfig.custom()
+                    .setProxy(proxy)
+                    .build();
+            request.setConfig(config);
         }
     }
 

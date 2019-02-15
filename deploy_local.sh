@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 
-mvn package
-vagrant scp hanko-plugin-keycloak-ear/target/hanko-plugin-keycloak.ear :/opt/keycloak-4.5.0.Final/standalone/deployments/hanko-plugin-keycloak.ear
-vagrant scp themes/base/login/login-hanko.ftl :/opt/keycloak-4.5.0.Final/themes/base/login/login-hanko.ftl
-vagrant scp themes/keycloak/login/resources/img/login-hanko.png :/opt/keycloak-4.5.0.Final/themes/keycloak/login/resources/img/login-hanko.png
-vagrant scp themes/keycloak/login/resources/js/hanko.js :/opt/keycloak-4.5.0.Final/themes/keycloak/login/resources/js/hanko.js
-vagrant scp themes/base/account/account-hanko.ftl :/opt/keycloak-4.5.0.Final/themes/base/account/account-hanko.ftl
-vagrant scp themes/keycloak/login/resources/js/fetch.umd.min.js :/opt/keycloak-4.5.0.Final/themes/keycloak/login/resources/js/fetch.umd.min.js
-vagrant scp themes/keycloak/login/resources/js/polyfill.min.js :/opt/keycloak-4.5.0.Final/themes/keycloak/login/resources/js/polyfill.min.js
-vagrant scp themes/keycloak/login/resources/js/hanko.js :/opt/keycloak-4.5.0.Final/themes/keycloak/login/resources/js/hanko.js
-vagrant scp themes/keycloak/account/resources/js/fetch.umd.min.js :/opt/keycloak-4.5.0.Final/themes/keycloak/account/resources/js/fetch.umd.min.js
-vagrant scp themes/keycloak/account/resources/js/polyfill.min.js :/opt/keycloak-4.5.0.Final/themes/keycloak/account/resources/js/polyfill.min.js
+KCBASE=~/keycloak/keycloak-4.8.3.Final
+
+./build.sh
+
+${KCBASE}/bin/jboss-cli.sh --command="module remove --name=hanko-plugin-keycloak-ejb" || true
+
+${KCBASE}/bin/jboss-cli.sh --command="module add --name=hanko-plugin-keycloak-ejb --resources=hanko-plugin-keycloak-ejb/target/hanko-plugin-keycloak-ejb-0.2-SNAPSHOT.jar --dependencies=org.keycloak.keycloak-core,org.keycloak.keycloak-common,org.keycloak.keycloak-services,org.keycloak.keycloak-model-jpa,org.keycloak.keycloak-server-spi,org.keycloak.keycloak-server-spi-private,javax.ws.rs.api,javax.persistence.api,org.hibernate,org.javassist,org.liquibase,com.fasterxml.jackson.core.jackson-core,com.fasterxml.jackson.core.jackson-databind,com.fasterxml.jackson.core.jackson-annotations,org.jboss.resteasy.resteasy-jaxrs,org.jboss.logging,org.apache.httpcomponents,org.apache.commons.codec"
+
+unzip -o dist/themes.zip -d ${KCBASE}
