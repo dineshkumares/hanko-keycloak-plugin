@@ -2,19 +2,14 @@ package io.hanko.plugin.keycloak.profile;
 
 import io.hanko.client.java.HankoClient;
 import io.hanko.client.java.HankoClientConfig;
-import io.hanko.client.java.models.ChangePassword;
-import io.hanko.client.java.models.HankoDevice;
-import io.hanko.client.java.models.HankoRegistrationRequest;
-import io.hanko.client.java.models.HankoRequest;
+import io.hanko.client.java.models.*;
+import io.hanko.plugin.keycloak.authentication.HankoCredentialModel;
 import io.hanko.plugin.keycloak.authentication.HankoCredentialProvider;
 import io.hanko.plugin.keycloak.authentication.HankoMultiAuthenticator;
+import io.hanko.plugin.keycloak.common.HankoConfigurationException;
 import io.hanko.plugin.keycloak.common.HankoResourceProvider;
 import io.hanko.plugin.keycloak.common.HankoUtils;
-import io.hanko.plugin.keycloak.serialization.ErrorMessage;
-import io.hanko.plugin.keycloak.serialization.HankoRegistrationChallenge;
-import io.hanko.plugin.keycloak.serialization.HankoStatus;
-import io.hanko.plugin.keycloak.serialization.WebAuthnResponse;
-import org.keycloak.credential.CredentialModel;
+import io.hanko.plugin.keycloak.serialization.*;
 import org.keycloak.forms.account.freemarker.model.RealmBean;
 import org.keycloak.forms.account.freemarker.model.UrlBean;
 import org.keycloak.models.KeycloakSession;
@@ -55,7 +50,7 @@ public class HankoProfileProvider extends HankoResourceProvider {
         }
         return Cors.add(request, Response.ok())
                 .allowedMethods("GET", "POST", "DELETE")
-                .allowedOrigins(uriInfo, context.getClient())
+                .allowedOrigins(session, context.getClient())
                 .preflight()
                 .auth()
                 .build();
@@ -94,13 +89,14 @@ public class HankoProfileProvider extends HankoResourceProvider {
     @Path("register")
     @Produces(MediaType.APPLICATION_JSON)
     public Response post() {
-       return post("uaf");
+       return post("uaf", null);
     }
 
     @POST
     @Path("registerType/{type}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response post(@PathParam("type") String fidoTypeString) {
+    @Consumes(MediaType.APPLICATION_JSON)
+    public Response post(@PathParam("type") String fidoTypeString, AuthenticatorSelectionCriteria authenticatorSelectionCriteria) {
         ensureIsAuthenticatedUser();
 
         HankoClient.FidoType fidoType = HankoClient.FidoType.FIDO_UAF;
@@ -124,7 +120,7 @@ public class HankoProfileProvider extends HankoResourceProvider {
             HankoClientConfig config = HankoUtils.createConfig(session);
 
             String remoteAddress = context.getConnection().getRemoteAddr();
-            HankoRegistrationRequest hankoRequest = hankoClient.requestRegistration(config, userIdHanko, username, remoteAddress, fidoType);
+            HankoRegistrationRequest hankoRequest = hankoClient.requestRegistration(config, userIdHanko, username, remoteAddress, fidoType, authenticatorSelectionCriteria);
 
             userStore.setHankoRequestId(currentUser(), hankoRequest.id);
 
@@ -191,9 +187,8 @@ public class HankoProfileProvider extends HankoResourceProvider {
             Response.ResponseBuilder responseBuilder = Response.ok(hankoRequest);
 
             if (hankoRequest.isConfirmed()) {
-                UserCredentialModel credentials = new UserCredentialModel();
+                HankoCredentialModel credentials = new HankoCredentialModel(hankoUserId);
                 credentials.setType(HankoCredentialProvider.TYPE);
-                credentials.setValue(hankoUserId);
                 session.userCredentialManager().updateCredential(context.getRealm(), auth.getUser(), credentials);
                 URI uri = context.getUri().getBaseUriBuilder().path("realms").path(context.getRealm().getName()).build();
                 int maxCookieAge = 60 * 60 * 24 * 365; // 365 days
@@ -273,11 +268,16 @@ public class HankoProfileProvider extends HankoResourceProvider {
                 logger.warn("Failed to load properties", e);
             }
 
+            HankoClientConfig config = HankoUtils.createConfig(session);
+
+
             attributes.put("realm", new RealmBean(context.getRealm()));
             attributes.put("keycloakUrl", baseUri);
             attributes.put("keycloakRealm", context.getRealm().getName());
             attributes.put("keycloakRealmId", context.getRealm().getId());
             attributes.put("keycloakClientId", "hanko-account");
+            attributes.put("requires2fa", config.getRequries2fa().toString());
+
             attributes.put("url", new UrlBean(session.getContext().getRealm(), theme, baseUri, baseQueryUri, uriInfo.getRequestUri(), stateChecker));
 
             if (auth != null && auth.getUser() != null) {
@@ -290,6 +290,9 @@ public class HankoProfileProvider extends HankoResourceProvider {
             logger.error("Failed to process template", e);
         } catch (IOException e) {
             logger.error("Failed to load theme", e);
+        } catch (HankoConfigurationException e) {
+            logger.error("Failed to load hanko config",e);
+            throw new RuntimeException(e);
         }
 
         return "";
@@ -372,15 +375,27 @@ public class HankoProfileProvider extends HankoResourceProvider {
         String hankoUserId = userStore.getHankoUserId(currentUser());
         String username = currentUser().getUsername();
 
-        UserCredentialModel credentials = new UserCredentialModel();
-        credentials.setType(CredentialModel.PASSWORD);
-        credentials.setValue(changePassword.newPassword);
+        UserCredentialModel credentials = UserCredentialModel.password("password");
 
         session.userCredentialManager().updateCredential(context.getRealm(), auth.getUser(), credentials);
 
-
         Response.ResponseBuilder responseBuilder = Response.ok();
         return HankoUtils.withCorsNoCache(responseBuilder, "POST", this);
+    }
+
+    @GET
+    @Path("config")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getConfig() {
+        try {
+            HankoClientConfig config = HankoUtils.createConfig(session);
+            HankoRealmConfig realmConfig = new HankoRealmConfig(config.getRequries2fa());
+            Response.ResponseBuilder responseBuilder = Response.ok(realmConfig);
+            return HankoUtils.withCorsNoCache(responseBuilder, "POST", this);
+        } catch (Exception ex) {
+            String response = logAndFail("Could not get config", ex);
+            return withError(response, Response.Status.INTERNAL_SERVER_ERROR, "GET");
+        }
     }
 
     private Response withError(String error, Response.Status status, String method) {

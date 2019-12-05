@@ -28,7 +28,6 @@ public class HankoUsernameAuthenticator extends AbstractUsernameFormAuthenticato
     @Override
     public void authenticate(AuthenticationFlowContext context) {
         String authNote = context.getAuthenticationSession().getAuthNote("TEST");
-        log.error("authNote: " + authNote);
         LoginFormsProvider forms = context.form();
         forms.setAttribute("login",  new LoginBean(context.getHttpRequest().getDecodedFormParameters()));
         Response challengeResponse = forms.createForm("hanko-username.ftl");
@@ -36,7 +35,6 @@ public class HankoUsernameAuthenticator extends AbstractUsernameFormAuthenticato
             log.error("getUser != null => attempted");
             context.attempted();
         } else {
-            log.error("getUser == null => challenge");
             context.challenge(challengeResponse);
         }
     }
@@ -77,6 +75,7 @@ public class HankoUsernameAuthenticator extends AbstractUsernameFormAuthenticato
         context.getAuthenticationSession().setAuthNote(AbstractUsernameFormAuthenticator.ATTEMPTED_USERNAME, username);
 
         UserModel user = null;
+
         try {
             user = KeycloakModelUtils.findUserByNameOrEmail(context.getSession(), context.getRealm(), username);
         } catch (ModelDuplicateException mde) {
@@ -92,13 +91,7 @@ public class HankoUsernameAuthenticator extends AbstractUsernameFormAuthenticato
             return false;
         }
 
-        if (invalidUser(context, user)) {
-            return false;
-        }
-
-//        if (!validatePassword(context, user, inputData)) {
-//            return false;
-//        }
+        testInvalidUser(context, user);
 
         if (!enabledUser(context, user)) {
             return false;

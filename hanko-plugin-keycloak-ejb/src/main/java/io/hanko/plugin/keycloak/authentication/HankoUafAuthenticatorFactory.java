@@ -23,7 +23,7 @@ public class HankoUafAuthenticatorFactory implements AuthenticatorFactory, Confi
     public static final String ID = "hanko-uaf-login";
 
     private static final AuthenticationExecutionModel.Requirement[] REQUIREMENT_CHOICES = {
-            AuthenticationExecutionModel.Requirement.OPTIONAL,
+            AuthenticationExecutionModel.Requirement.CONDITIONAL,
             AuthenticationExecutionModel.Requirement.REQUIRED,
             AuthenticationExecutionModel.Requirement.DISABLED
     };

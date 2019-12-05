@@ -10,11 +10,11 @@
         </#if>
     <#elseif section = "header">
         <#if loginMethod = "PASSWORD">
-            Sign in with Password
+            ${msg("signInPassword")}
         <#elseif loginMethod = "UAF">
-            Sign in with HANKO Authenticator
+            ${msg("signInAuthenticator")}
         <#elseif loginMethod = "WEBAUTHN">
-            Sign in with WebAuthn
+            ${msg("signInWebAuthn")}
         </#if>
     <#elseif section = "form">
 
@@ -37,8 +37,7 @@
             </form>
             <#include "hanko-multi-login-links.ftl">
         <#elseif loginMethod = "UAF">
-            <p>Please confirm your authentication with the HANKO Authenticator you registered with your account. We have
-                sent a notification to your device.</p>
+            <p>${msg("signInDescriptionAuthenticator")}</p>
 
             <img src="${url.resourcesPath}/img/login-hanko.png" width="120" style="display: block; margin: 50px auto">
 
@@ -70,11 +69,10 @@
                         }
                     });
                 };
-
                 window.onload = awaitLoginComplete;
             </script>
         <#elseif loginMethod = "WEBAUTHN">
-            <p>Please confirm your authentication with WebAuthn.</p>
+            <p>${msg("signInDescriptionWebAuthn")}</p>
 
             <div class="flexrow">
                 <div class="imgwrapper">
@@ -94,7 +92,68 @@
             <script>
                 var fidoRequest = JSON.parse('${request?no_esc}');
 
-                var challenge = Uint8Array.from(window.atob(fidoRequest.challenge), function (v) {
+                function convertToBinary (dataURI) {
+                  var raw = window.atob(dataURI)
+                  var rawLength = raw.length
+                  var array = new Uint8Array(new ArrayBuffer(rawLength))
+
+                  for (let i = 0; i < rawLength; i++) {
+                    array[i] = raw.charCodeAt(i)
+                  }
+                  return array
+                }
+
+                function arrayBufferToBase64Url(buf) {
+                  var binary = ''
+                  var bytes = new Uint8Array(buf)
+                  var len = bytes.byteLength
+                  for (var i = 0; i < len; i++) {
+                    binary += String.fromCharCode(bytes[i])
+                  }
+                  return window
+                    .btoa(binary)
+                    .replace(/\//g, '_')
+                    .replace(/\+/g, '-')
+                }
+
+                function base64UrlToArrayBuffer(data) {
+                  let input = data.replace(/-/g, '+')
+                    .replace(/_/g, '/')
+
+                  return convertToBinary(input)
+                }
+
+                function decodeAuthenticationRequest(request) {
+                  var newRequest = request
+                  newRequest.challenge = base64UrlToArrayBuffer(request.challenge)
+                  newRequest.allowCredentials = request.allowCredentials.map(function (cred) {
+                    return {
+                      id: base64UrlToArrayBuffer(cred.id),
+                      type: cred.type,
+                      transports: cred.transports
+                    }
+                  })
+
+                  return newRequest
+                }
+
+                function encodeAuthenticationResult(data) {
+                  var d = {}
+                  d.response = {}
+                  d.rawId = arrayBufferToBase64Url(data.rawId)
+                  d.id = data.id
+                  d.type = data.type
+                  d.response.clientDataJSON = arrayBufferToBase64Url(data.response.clientDataJSON)
+                  d.response.authenticatorData = arrayBufferToBase64Url(data.response.authenticatorData)
+                  d.response.signature = arrayBufferToBase64Url(data.response.signature)
+                  d.response.userHandle = arrayBufferToBase64Url(data.response.userHandle)
+
+                  return d
+                }
+
+                var getCredentialOptions = decodeAuthenticationRequest(fidoRequest)
+
+<#--                  var challenge = Uint8Array.from(window.atob(fidoRequest.challenge), function (v) {
                     return v.charCodeAt(0);
                 });
 
@@ -106,7 +165,7 @@
                                 return v.charCodeAt(0);
                             }),
                             type: "public-key",
-                            transports: ["usb", "nfc", "ble"]
+                            transports: ["usb", "nfc", "ble", "internal"]
                         };
                     }),
                     rpId: document.domain,
@@ -117,7 +176,7 @@
                     return String.fromCharCode.apply(null, new Uint8Array(buf));
                 }
 
-                function arrayBufferToBase64(buf) {
+                function arrayBufferToBase64Url(buf) {
                     var binary = '';
                     var bytes = new Uint8Array(buf);
                     var len = bytes.byteLength;
@@ -134,17 +193,19 @@
                         bufView[i] = str.charCodeAt(i);
                     }
                     return buf;
-                }
+                }  -->
 
                 navigator.credentials.get({publicKey: getCredentialOptions})
                         .then(function (credentialResult) {
-                            var hankoResponse = {
+<#--                              var hankoResponse = {
                                 credID: credentialResult.id.replace(/\//g, "_").replace(/\+/g, "-"),
                                 credType: "public-key",
-                                clientData: arrayBufferToBase64(credentialResult.response.clientDataJSON),
-                                signature: arrayBufferToBase64(credentialResult.response.signature),
-                                authenticatorData: arrayBufferToBase64(credentialResult.response.authenticatorData)
-                            };
+                                clientData: arrayBufferToBase64Url(credentialResult.response.clientDataJSON),
+                                signature: arrayBufferToBase64Url(credentialResult.response.signature),
+                                authenticatorData: arrayBufferToBase64Url(credentialResult.response.authenticatorData)
+                            };  -->
+
+                            var hankoResponse = encodeAuthenticationResult(credentialResult)
 
                             console.log(hankoResponse);
                             document.getElementById('hankoresponse').value = JSON.stringify(hankoResponse);

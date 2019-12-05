@@ -36,7 +36,7 @@ public class HankoClient {
         }
     }
 
-    public HankoRegistrationRequest requestRegistration(HankoClientConfig config, String userId, String username, String remoteAddress, FidoType fidoType) {
+    public HankoRegistrationRequest requestRegistration(HankoClientConfig config, String userId, String username, String remoteAddress, FidoType fidoType, AuthenticatorSelectionCriteria authenticatorSelectionCriteria) {
         HankoHttpClient httpClient = httpClientFactory.create(config);
         String urlRepresentation = getUrlRepresentation(fidoType);
 
@@ -44,7 +44,8 @@ public class HankoClient {
                 .withOperation("REG")
                 .withUsername(username)
                 .withUserId(userId)
-                .withClientData(new ClientData(remoteAddress));
+                .withClientData(new ClientData(remoteAddress))
+                .withAuthenticatorSelectionCriteria(authenticatorSelectionCriteria);
 
         String json = jsonParser.serialize(newHankoRequest);
 

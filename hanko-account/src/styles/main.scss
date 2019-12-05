@@ -13,6 +13,7 @@ $navbar-color: #212121 !default;
 
 $primary-button-color: rgb(234, 89, 83) !default;
 $primary-button-font-color: #fff !default;
+$error-color: rgb(234, 89, 83) !default;
 
 %font-default {
   font-family: Montserrat, Arial, sans-serif;
@@ -236,4 +237,34 @@ h1 {
   display: flex;
   justify-content: flex-end;
   width: 100%;
+}
+
+.warning {
+  border: 1px solid $error-color;
+  padding: 10px;
+  font-weight: 600;
+}
+
+.popup-wrapper {
+  display: flex;
+  position: fixed;
+  z-index: 1;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.popup-content {
+  width: 500px;
+  border-radius: 2px;
+  background-color: rgb(254, 254, 254);
+  margin: auto;
+  padding: 20px;
+}
+
+button.small {
+  width: 100px;
 }

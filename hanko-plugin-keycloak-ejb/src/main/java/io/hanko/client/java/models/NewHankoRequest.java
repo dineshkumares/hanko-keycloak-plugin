@@ -7,6 +7,7 @@ public class NewHankoRequest {
     public String transaction;
     public String[] deviceIds;
     public ClientData clientData;
+    public AuthenticatorSelectionCriteria authenticatorSelectionCriteria;
 
     public NewHankoRequest withOperation(String operation) {
         this.operation = operation;
@@ -35,6 +36,11 @@ public class NewHankoRequest {
 
     public NewHankoRequest withClientData(ClientData clientData) {
         this.clientData = clientData;
+        return this;
+    }
+
+    public NewHankoRequest withAuthenticatorSelectionCriteria(AuthenticatorSelectionCriteria authenticatorSelectionCriteria) {
+        this.authenticatorSelectionCriteria = authenticatorSelectionCriteria;
         return this;
     }
 }

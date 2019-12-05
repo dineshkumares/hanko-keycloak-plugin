@@ -10,7 +10,7 @@
 
         <img src="${url.resourcesPath}/img/login-hanko.png" width="120" style="display: block; margin: 50px auto">
 
-        <form action="${url.loginAction}" style="display:hidden" class="${properties.kcFFormClass!}"
+        <form action="${url.loginAction}" style="display:none" class="${properties.kcFFormClass!}"
               id="kc-hanko-login-form"
               method="post">
             <input class="${properties.kcButtonClass!} ${properties.kcButtonDefaultClass!} ${properties.kcButtonLargeClass!}"

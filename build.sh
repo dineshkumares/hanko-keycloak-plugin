@@ -28,10 +28,12 @@ cp hanko-account/dist/*.js dist/themes/playground/account/resources/js/
 
 echo Copy main.css
 cp hanko-account/dist/main.css dist/themes/keycloak/account/resources/css/main.css
+
 mkdir -p  dist/themes/playground/account/resources/css
 cp hanko-account/dist/playground.css dist/themes/playground/account/resources/css/main.css
 
+
 echo Zip new themes
 cd dist
-zip -r themes.zip themes
+zip -r ../themes.zip themes
 cd ..

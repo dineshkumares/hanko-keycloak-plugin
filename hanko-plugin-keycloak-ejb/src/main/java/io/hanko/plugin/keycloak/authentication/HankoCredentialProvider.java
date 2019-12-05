@@ -21,18 +21,14 @@ import org.keycloak.common.util.Time;
 import org.keycloak.credential.*;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
-import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.cache.CachedUserModel;
 import org.keycloak.models.cache.OnUserCache;
 
-import java.util.Collections;
-import java.util.Set;
-
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
  */
-public class HankoCredentialProvider implements CredentialProvider, CredentialInputValidator, CredentialInputUpdater, OnUserCache {
+public class HankoCredentialProvider implements CredentialProvider<HankoCredentialModel>, CredentialInputValidator, OnUserCache {
 
     private static final Logger logger = Logger.getLogger(HankoCredentialProvider.class);
 
@@ -42,6 +38,10 @@ public class HankoCredentialProvider implements CredentialProvider, CredentialIn
 
     public HankoCredentialProvider(KeycloakSession session) {
         this.session = session;
+    }
+
+    private UserCredentialStore getCredentialStore() {
+        return session.userCredentialManager();
     }
 
     @Override
@@ -58,6 +58,29 @@ public class HankoCredentialProvider implements CredentialProvider, CredentialIn
     }
 
     @Override
+    public String getType() {
+        return "Hanko";
+    }
+
+    @Override
+    public CredentialModel createCredential(RealmModel realm, UserModel user, HankoCredentialModel credentialModel) {
+        if (credentialModel.getCreatedDate() == null) {
+            credentialModel.setCreatedDate(Time.currentTimeMillis());
+        }
+        return getCredentialStore().createCredential(realm, user, credentialModel);
+    }
+
+    @Override
+    public void deleteCredential(RealmModel realm, UserModel user, String credentialId) {
+        getCredentialStore().removeStoredCredential(realm, user, credentialId);
+    }
+
+    @Override
+    public HankoCredentialModel getCredentialFromModel(CredentialModel model) {
+        return HankoCredentialModel.createFromCredentialModel(model);
+    }
+
+    @Override
     public boolean isValid(RealmModel realm, UserModel user, CredentialInput input) {
         throw new UnsupportedOperationException("Authenticator should validate credential");
     }
@@ -65,36 +88,6 @@ public class HankoCredentialProvider implements CredentialProvider, CredentialIn
     @Override
     public boolean supportsCredentialType(String credentialType) {
         return TYPE.equals(credentialType);
-    }
-
-    @Override
-    public boolean updateCredential(RealmModel realm, UserModel user, CredentialInput input) {
-        if (!supportsCredentialType(input.getType())) return false;
-
-        CredentialModel model = new CredentialModel();
-        model.setType(TYPE);
-        model.setCreatedDate(Time.currentTimeMillis());
-        model.setValue(((UserCredentialModel) input).getValue());
-
-        session.userCredentialManager().createCredential(realm, user, model);
-
-        return true;
-    }
-
-    @Override
-    public void disableCredentialType(RealmModel realm, UserModel user, String credentialType) {
-        if (!supportsCredentialType(credentialType)) {
-            return;
-        }
-
-        for (CredentialModel credential : session.userCredentialManager().getStoredCredentialsByType(realm, user, TYPE)) {
-            session.userCredentialManager().removeStoredCredential(realm, user, credential.getId());
-        }
-    }
-
-    @Override
-    public Set<String> getDisableableCredentialTypes(RealmModel realm, UserModel user) {
-        return isConfiguredFor(realm, user, TYPE) ? Collections.singleton(TYPE) : Collections.emptySet();
     }
 
     @Override

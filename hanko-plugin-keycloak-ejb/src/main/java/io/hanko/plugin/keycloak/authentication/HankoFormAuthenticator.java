@@ -105,10 +105,6 @@ public class HankoFormAuthenticator extends AbstractUsernameFormAuthenticator im
             return false;
         }
 
-        if (invalidUser(context, user)) {
-            return false;
-        }
-
         if (!validatePassword(context, user, inputData)) {
             return false;
         }
@@ -199,7 +195,7 @@ public class HankoFormAuthenticator extends AbstractUsernameFormAuthenticator im
             forms.setFormData(formData);
         }
 
-        return forms.createLogin();
+        return forms.createLoginUsernamePassword();
     }
 
 

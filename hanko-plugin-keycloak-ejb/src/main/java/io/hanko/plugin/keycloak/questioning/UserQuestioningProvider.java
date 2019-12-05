@@ -38,7 +38,7 @@ public class UserQuestioningProvider extends HankoResourceProvider {
         }
         return Cors.add(request, Response.ok())
                 .allowedMethods("GET", "POST", "DELETE")
-                .allowedOrigins(uriInfo, context.getClient())
+                .allowedOrigins(session, context.getClient())
                 .preflight()
                 .auth()
                 .build();
