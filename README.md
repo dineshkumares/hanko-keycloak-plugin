@@ -20,7 +20,7 @@ You can try passwordless authentication with Hanko at our [Hanko Playground](htt
 
 ## Compatibility
 
-The latest version of this plugin (v0.2) has been tested with Keycloak 4.8.3.Final and should be backwards compatible with Keycloak version >= 4.6.0.Final.
+The latest version of this plugin (v0.3.0) has been tested with Keycloak 8.0.0 and should be backwards compatible with Keycloak version >= 4.6.0.Final.
 
 For Keycloak version 4.5.0.Final and earlier, you can use the plugin version v0.1.3.
 
